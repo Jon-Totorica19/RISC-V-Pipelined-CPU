@@ -21,7 +21,6 @@ module riscv_core (
     logic branch_taken;
 
     // IF/ID Wires
-    logic stall, flush;
     logic [31:0] if_id_pc_addr, if_id_pc_plus4, if_id_instr;
 
     // ID/EX Wires
@@ -46,12 +45,15 @@ module riscv_core (
     logic [1:0] forward_a, forward_b; // MUX Control signals
     logic [31:0] fwd_a, fwd_b; // ALU Source Data Values
 
+    // Hazard Detection Unit Wires
+    logic stall, flush_id_ex;
 
 
     // IF Stage: pc, instr_mem, pc+4 (Adder)
     pc PC (
         .clk(clk),
         .rst(rst),
+        .stall(stall),
         .next_pc(next_pc),
         .pc_addr(pc_addr)
     );
@@ -64,15 +66,11 @@ module riscv_core (
     // Increment PC
     assign pc_plus4 = pc_addr + 4;
 
-    // Zero until later handeled
-    assign stall = 0;
-    assign flush = 0;
-
     // IF/ID Pipeline Register
     if_id_reg if_id_reg (
         .clk(clk),
         .stall(stall),
-        .flush(flush),
+        .flush(1'b0),
         .rst(rst),
         .pc_addr_in(pc_addr),
         .pc_plus4_in(pc_plus4),
@@ -82,7 +80,7 @@ module riscv_core (
         .instr(if_id_instr)
     );
 
-    // ID Stage: lui/auipc decode, control_unit, reg_file, imm_gen, jump instr signal
+    // ID Stage: lui/auipc decode, hazard detection unit, control_unit, reg_file, imm_gen, jump instr signal
 
     // Decode LUI or AUIPC instr
     assign is_lui = (if_id_instr[6:0] == OPCODE_U_LUI);
@@ -90,6 +88,15 @@ module riscv_core (
 
     // Jump instr signal. JAL and JALR
     assign is_jalr = (if_id_instr[6:0] == 7'b1100111); 
+
+    hazard_detection_unit hazard_detection_unit (
+        .id_ex_MemRead(id_ex_MemRead),
+        .id_ex_rd(id_ex_rd),
+        .if_id_rs1(if_id_instr[19:15]),
+        .if_id_rs2(if_id_instr[24:20]),
+        .stall(stall),
+        .flush_id_ex(flush_id_ex)
+    );
 
     control_unit control_unit (
         .opcode(if_id_instr[6:0]),
@@ -122,7 +129,7 @@ module riscv_core (
     // ID/EX Pipeline Register
     id_ex_reg id_ex_reg (
         .clk(clk),
-        .flush(flush),
+        .flush(flush_id_ex),
         .rst(rst),
         .pc_addr_in(if_id_pc_addr),
         .pc_plus4_in(if_id_pc_plus4),

@@ -18,11 +18,12 @@ VERILOG_SOURCES += \
 	$(PWD)/../../rtl/core/ex_mem_reg.sv \
 	$(PWD)/../../rtl/core/mem_wb_reg.sv \
 	$(PWD)/../../rtl/core/forwarding_unit.sv \
+	$(PWD)/../../rtl/core/hazard_detection_unit.sv \
 	$(PWD)/../../rtl/core/riscv_core.sv
 
 TOPLEVEL = riscv_core
 
-MODULE = test_riscv_core_data_hazards
+MODULE = test_riscv_core_load_use_hazards
 
 EXTRA_ARGS += --trace
 
