@@ -42,6 +42,11 @@ module riscv_core (
     logic [4:0] mem_wb_rd;
     logic mem_wb_RegWrite, mem_wb_MemToReg, mem_wb_Jump;
 
+    // Forwarding Unit Wires
+    logic [1:0] forward_a, forward_b; // MUX Control signals
+    logic [31:0] fwd_a, fwd_b; // ALU Source Data Values
+
+
 
     // IF Stage: pc, instr_mem, pc+4 (Adder)
     pc PC (
@@ -163,7 +168,7 @@ module riscv_core (
         .ALUOp(id_ex_ALUOp)
     );
 
-    // EX Stage: alu_control, ALU source 1 and 2 MUXs, brach target address (Adder), ALU, 
+    // EX Stage: alu_control, forwarding unit, ALU source 1 and 2 MUXs, brach target address (Adder), ALU
     alu_control alu_control (
         .funct7_5(id_ex_funct7_5),
         .ALUOp(id_ex_ALUOp),
@@ -171,11 +176,40 @@ module riscv_core (
         .alu_ctrl(alu_ctrl)
     );
 
+    forwarding_unit forwarding_unit (
+        .ex_mem_RegWrite(ex_mem_RegWrite),
+        .mem_wb_RegWrite(mem_wb_RegWrite),
+        .ex_mem_rd(ex_mem_rd),
+        .mem_wb_rd(mem_wb_rd),
+        .id_ex_rs1(id_ex_rs1),
+        .id_ex_rs2(id_ex_rs2),
+        .forward_a(forward_a),
+        .forward_b(forward_b)
+    );
+
+    // 3:1 MUX - Select rd1 source for ALU Input a
+    always_comb begin
+        case (forward_a)
+            2'b10: fwd_a = ex_mem_alu_result;  
+            2'b01: fwd_a = write_back;
+            default: fwd_a = id_ex_rd1;
+        endcase
+    end
+
     // 3:1 MUX - Select ALU Source 1. Accomodate for lui and auipc instr. 
-    assign alu_a = id_ex_is_lui ? 32'd0 : id_ex_is_auipc ? id_ex_pc_addr : id_ex_rd1;
+    assign alu_a = id_ex_is_lui ? 32'd0 : id_ex_is_auipc ? id_ex_pc_addr : fwd_a;
+
+    // 3:1 MUX - Select rd2 source for ALU Input b
+    always_comb begin
+        case (forward_b)
+            2'b10: fwd_b = ex_mem_alu_result;  
+            2'b01: fwd_b = write_back;
+            default: fwd_b = id_ex_rd2;
+        endcase
+    end
 
     // 2:1 MUX - Select ALU Source 2. Immediete value or read data memory
-    assign alu_b = id_ex_ALUSrc ? id_ex_imm : id_ex_rd2;
+    assign alu_b = id_ex_ALUSrc ? id_ex_imm : fwd_b;
 
     alu alu (
         .a(alu_a),
@@ -208,7 +242,7 @@ module riscv_core (
         .rst(rst),
         .pc_plus4_in(id_ex_pc_plus4),
         .alu_result_in(alu_result),
-        .rd2_in(id_ex_rd2),
+        .rd2_in(fwd_b),
         .rd_in(id_ex_rd),
         .RegWrite_in(id_ex_RegWrite),
         .MemRead_in(id_ex_MemRead),
@@ -257,7 +291,7 @@ module riscv_core (
     );
 
     // 3:1 MUX - Select Writeback Source. JAL/JALR link register, alu_result, or read data memory
-    assign write_back = mem_wb_Jump ? mem_wb_pc_plus4 :mem_wb_MemToReg ? mem_wb_read_data : mem_wb_alu_result;
+    assign write_back = mem_wb_Jump ? mem_wb_pc_plus4 : mem_wb_MemToReg ? mem_wb_read_data : mem_wb_alu_result;
 
 
 endmodule
