@@ -24,7 +24,7 @@ VERILOG_SOURCES += \
 
 TOPLEVEL = riscv_core
 
-MODULE = test_riscv_core_jumps
+MODULE = test_riscv_core_lui_auipc
 
 EXTRA_ARGS += --trace
 
