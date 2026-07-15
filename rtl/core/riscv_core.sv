@@ -46,7 +46,7 @@ module riscv_core (
     logic [31:0] fwd_a, fwd_b; // ALU Source Data Values
 
     // Hazard Detection Unit Wires
-    logic stall, flush_id_ex;
+    logic stall, flush_id_ex, id_ex_flush, branch_flush;
 
 
     // IF Stage: pc, instr_mem, pc+4 (Adder)
@@ -70,7 +70,7 @@ module riscv_core (
     if_id_reg if_id_reg (
         .clk(clk),
         .stall(stall),
-        .flush(1'b0),
+        .flush(branch_flush),
         .rst(rst),
         .pc_addr_in(pc_addr),
         .pc_plus4_in(pc_plus4),
@@ -80,7 +80,7 @@ module riscv_core (
         .instr(if_id_instr)
     );
 
-    // ID Stage: lui/auipc decode, hazard detection unit, control_unit, reg_file, imm_gen, jump instr signal
+    // ID Stage: lui/auipc decode, hazard detection unit, id_ex_flsuh decision, control_unit, reg_file, imm_gen, jump instr signal
 
     // Decode LUI or AUIPC instr
     assign is_lui = (if_id_instr[6:0] == OPCODE_U_LUI);
@@ -97,6 +97,8 @@ module riscv_core (
         .stall(stall),
         .flush_id_ex(flush_id_ex)
     );
+
+    assign id_ex_flush = flush_id_ex | branch_flush;
 
     control_unit control_unit (
         .opcode(if_id_instr[6:0]),
@@ -129,7 +131,7 @@ module riscv_core (
     // ID/EX Pipeline Register
     id_ex_reg id_ex_reg (
         .clk(clk),
-        .flush(flush_id_ex),
+        .flush(id_ex_flush),
         .rst(rst),
         .pc_addr_in(if_id_pc_addr),
         .pc_plus4_in(if_id_pc_plus4),
@@ -175,7 +177,7 @@ module riscv_core (
         .ALUOp(id_ex_ALUOp)
     );
 
-    // EX Stage: alu_control, forwarding unit, ALU source 1 and 2 MUXs, brach target address (Adder), ALU
+    // EX Stage: alu_control, forwarding unit, branch flsuh unit, ALU source 1 and 2 MUXs, brach target address (Adder), ALU
     alu_control alu_control (
         .funct7_5(id_ex_funct7_5),
         .ALUOp(id_ex_ALUOp),
@@ -192,6 +194,13 @@ module riscv_core (
         .id_ex_rs2(id_ex_rs2),
         .forward_a(forward_a),
         .forward_b(forward_b)
+    );
+
+    branch_flush_unit branch_flush_unit (
+        .id_ex_Branch(id_ex_Branch),
+        .branch_taken(branch_taken),
+        .id_ex_Jump(id_ex_Jump),
+        .flush(branch_flush)
     );
 
     // 3:1 MUX - Select rd1 source for ALU Input a
