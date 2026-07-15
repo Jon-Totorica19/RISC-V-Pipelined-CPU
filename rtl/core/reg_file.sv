@@ -9,10 +9,10 @@ module reg_file (
     // Internal Storage. 32 regs 32 bits each
     logic [31:0] regs [31:0];
 
-    // Asynchrnous Register Reads
+    // Asynchrnous Register Reads. Accomodate for writes and reads in the same cycle. Write first, read second, using MUX
     always_comb begin
-        rd1 = (rs1 != 5'd0) ? regs[rs1] : 32'd0;
-        rd2 = (rs2 != 5'd0) ? regs[rs2] : 32'd0;
+        rd1 = (RegWrite && rd != 5'd0 && rd == rs1) ? WriteData : regs[rs1];
+        rd2 = (RegWrite && rd != 5'd0 && rd == rs2) ? WriteData : regs[rs2];
     end
 
     // Synchrnous Register Writes

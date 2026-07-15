@@ -42,7 +42,7 @@ async def test_branch_flush(dut):
     dut.rst.value = 0
 
     # First 5 instr
-    for _ in range(9):
+    for _ in range(8):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
