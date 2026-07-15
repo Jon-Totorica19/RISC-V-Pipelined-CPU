@@ -24,7 +24,7 @@ VERILOG_SOURCES += \
 
 TOPLEVEL = riscv_core
 
-MODULE = test_riscv_core_branch_flush
+MODULE = test_riscv_core_jumps
 
 EXTRA_ARGS += --trace
 
