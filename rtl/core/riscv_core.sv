@@ -30,6 +30,7 @@ module riscv_core (
     logic id_ex_funct7_5;
     logic id_ex_RegWrite, id_ex_ALUSrc, id_ex_MemRead, id_ex_MemWrite, id_ex_MemToReg, id_ex_Branch, id_ex_Jump, id_ex_is_jalr, id_ex_is_lui, id_ex_is_auipc;
     logic [1:0] id_ex_ALUOp;
+    logic id_ex_predicted_taken;
 
     // EX/MEM Wires
     logic [31:0] ex_mem_pc_plus4, ex_mem_alu_result, ex_mem_rd2;
@@ -46,7 +47,11 @@ module riscv_core (
     logic [31:0] fwd_a, fwd_b; // ALU Source Data Values
 
     // Hazard Detection Unit Wires
-    logic stall, flush_id_ex, id_ex_flush, branch_flush;
+    logic stall, flush_id_ex, branch_flush;
+
+    // Branch Prediction Wire
+    logic predict_taken;
+    logic [31:0] id_prediction_target;
 
 
     // IF Stage: pc, instr_mem, pc+4 (Adder)
@@ -70,7 +75,7 @@ module riscv_core (
     if_id_reg if_id_reg (
         .clk(clk),
         .stall(stall),
-        .flush(branch_flush),
+        .flush(branch_flush | predict_taken),
         .rst(rst),
         .pc_addr_in(pc_addr),
         .pc_plus4_in(pc_plus4),
@@ -80,7 +85,7 @@ module riscv_core (
         .instr(if_id_instr)
     );
 
-    // ID Stage: lui/auipc decode, hazard detection unit, id_ex_flsuh decision, control_unit, reg_file, imm_gen, jump instr signal
+    // ID Stage: lui/auipc decode, branch preictor, branch prediction target address, hazard detection unit, id_ex_flsuh decision, control_unit, reg_file, imm_gen, jump instr signal
 
     // Decode LUI or AUIPC instr
     assign is_lui = (if_id_instr[6:0] == OPCODE_U_LUI);
@@ -88,6 +93,19 @@ module riscv_core (
 
     // Jump instr signal. JAL and JALR
     assign is_jalr = (if_id_instr[6:0] == 7'b1100111); 
+
+    branch_predictor branch_predictor (
+        .clk(clk),
+        .rst(rst),
+        .pc_id(if_id_pc_addr),
+        .pc_ex(id_ex_pc_addr),
+        .is_branch_id(Branch),
+        .is_branch_ex(id_ex_Branch),
+        .branch_taken(branch_taken),
+        .predict_taken(predict_taken)
+    );
+
+    assign id_prediction_target = if_id_pc_addr + imm;
 
     hazard_detection_unit hazard_detection_unit (
         .id_ex_MemRead(id_ex_MemRead),
@@ -97,8 +115,6 @@ module riscv_core (
         .stall(stall),
         .flush_id_ex(flush_id_ex)
     );
-
-    assign id_ex_flush = flush_id_ex | branch_flush;
 
     control_unit control_unit (
         .opcode(if_id_instr[6:0]),
@@ -131,7 +147,7 @@ module riscv_core (
     // ID/EX Pipeline Register
     id_ex_reg id_ex_reg (
         .clk(clk),
-        .flush(id_ex_flush),
+        .flush(flush_id_ex | branch_flush),
         .rst(rst),
         .pc_addr_in(if_id_pc_addr),
         .pc_plus4_in(if_id_pc_plus4),
@@ -154,6 +170,7 @@ module riscv_core (
         .is_lui_in(is_lui),
         .is_auipc_in(is_auipc),
         .ALUOp_in(ALUOp),
+        .predicted_taken_in(predict_taken),
         .pc_addr(id_ex_pc_addr),
         .pc_plus4(id_ex_pc_plus4),
         .rd1(id_ex_rd1),
@@ -174,7 +191,8 @@ module riscv_core (
         .is_jalr(id_ex_is_jalr),
         .is_lui(id_ex_is_lui),
         .is_auipc(id_ex_is_auipc),
-        .ALUOp(id_ex_ALUOp)
+        .ALUOp(id_ex_ALUOp),
+        .predicted_taken(id_ex_predicted_taken)
     );
 
     // EX Stage: alu_control, forwarding unit, branch flsuh unit, ALU source 1 and 2 MUXs, brach target address (Adder), ALU
@@ -200,6 +218,7 @@ module riscv_core (
         .id_ex_Branch(id_ex_Branch),
         .branch_taken(branch_taken),
         .id_ex_Jump(id_ex_Jump),
+        .id_ex_predicted_taken(id_ex_predicted_taken),
         .flush(branch_flush)
     );
 
@@ -249,8 +268,9 @@ module riscv_core (
         endcase
     end
 
-    // 4:1 MUX - Select next_pc. JALR (rs1 + imm), JAL (pc + imm), branch target, increment pc. EX Stage for branches, ID for jump, IF for pc+4
-    assign next_pc = (id_ex_Jump & id_ex_is_jalr) ? alu_result : id_ex_Jump ? pc_target : (id_ex_Branch & branch_taken) ? pc_target : pc_plus4;
+    // 4:1 MUX - Select next_pc. JALR (rs1 + imm), JAL (pc + imm), branch target (prediction included), increment pc. EX Stage for branches, ID for jump, IF for pc+4
+
+     assign next_pc = (id_ex_Jump & id_ex_is_jalr) ? alu_result : id_ex_Jump ? pc_target : (id_ex_Branch & branch_taken & ~id_ex_predicted_taken) ? pc_target : (id_ex_Branch & ~branch_taken & id_ex_predicted_taken) ? id_ex_pc_plus4 : predict_taken ? id_prediction_target : pc_plus4;
 
     // EX/MEM Pipeline Register
     ex_mem_reg ex_mem_reg (
