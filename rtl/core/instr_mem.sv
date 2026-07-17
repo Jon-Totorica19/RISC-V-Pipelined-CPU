@@ -1,6 +1,9 @@
 // Instruction Memory: Takes an address as input from PC and outputs the next instrction of the program
 
+// Updated Instr Mem: Only reads on a miss from icache and sends cache back the instruction
+
 module instr_mem (
+    input logic clk, read_en,
     input logic [31:0] addr,
     output logic [31:0] instr
 );
@@ -8,17 +11,9 @@ module instr_mem (
     // Internal Storage: 256 words -- 1KiB
     logic [31:0] mem [0:255];
 
-    // Initial blocks run exactly once at time zero when sim starts
-    // Load mem from a hex file. $readmemh reads line by line and loads each value into mem[0], mem[1]....
-    // A hex file is a plain text file where each line is a 32 bit instruction
-
-    /*
-    Instructions are loaded in from python files instead
-    initial begin
-        $readmemh("program.hex", mem);
+    always_ff @(posedge clk) begin
+        if (read_en)
+            instr <= mem[addr[9:2]];
     end
-    */
-
-    assign instr = mem[addr[9:2]];
 
 endmodule

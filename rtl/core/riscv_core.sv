@@ -5,7 +5,7 @@ import riscv_pkg::*;
 module riscv_core (
     input logic clk, rst
 );
-    // Single Cycle Wires
+    // Core Wires
     logic [31:0] pc_addr, next_pc, pc_plus4, pc_target;
     logic [31:0] instr;
     logic [31:0] rd1, rd2;
@@ -19,6 +19,15 @@ module riscv_core (
     logic is_jalr;
     logic is_lui, is_auipc;
     logic branch_taken;
+
+    // Instr Cache Wires
+    logic icache_mem_read, icache_read_en, icache_stall;
+    logic [31:0] icache_instr, icache_mem_addr;
+    logic [31:0] final_next_pc;
+    logic [31:0] saved_pc;
+    logic pc_override;
+
+
 
     // IF/ID Wires
     logic [31:0] if_id_pc_addr, if_id_pc_plus4, if_id_instr;
@@ -47,24 +56,58 @@ module riscv_core (
     logic [31:0] fwd_a, fwd_b; // ALU Source Data Values
 
     // Hazard Detection Unit Wires
-    logic stall, flush_id_ex, branch_flush;
+    logic load_use_stall, flush_id_ex, branch_flush;
 
     // Branch Prediction Wire
     logic predict_taken;
     logic [31:0] id_prediction_target;
 
 
-    // IF Stage: pc, instr_mem, pc+4 (Adder)
+    // IF Stage: pc, instr cache, instr_mem, pc+4 (Adder)
     pc PC (
         .clk(clk),
         .rst(rst),
-        .stall(stall),
-        .next_pc(next_pc),
+        .stall(load_use_stall | icache_stall),
+        .next_pc(final_next_pc),
         .pc_addr(pc_addr)
     );
 
-    instr_mem instr_mem (
+     // icache next pc hadling
+     always_ff @(posedge clk) begin
+        if (rst) begin
+            pc_override <= 1'b0;
+            saved_pc <= 32'd0;
+        end
+        else if ((branch_flush | predict_taken) && icache_stall) begin
+            pc_override <= 1'b1;
+            saved_pc <= next_pc; // branch target address
+        end
+        else if (!icache_stall)
+            pc_override <= 1'b0;
+     end
+
+     assign final_next_pc = pc_override ? saved_pc : next_pc;
+
+    // Read on every cycle except branch flushes. (Dont include load use stall or else the ctr gets paused)
+    assign icache_read_en = ~(branch_flush | predict_taken);
+
+    icache icache (
+        .clk(clk),
+        .rst(rst),
+        .flush(branch_flush | predict_taken),
+        .read_en(icache_read_en),
         .addr(pc_addr),
+        .mem_data(instr),
+        .stall(icache_stall),
+        .mem_read(icache_mem_read),
+        .instr(icache_instr),
+        .mem_addr(icache_mem_addr)
+    );
+
+    instr_mem instr_mem (
+        .clk(clk),
+        .read_en(icache_mem_read),
+        .addr(icache_mem_addr),
         .instr(instr)
     );
 
@@ -74,12 +117,12 @@ module riscv_core (
     // IF/ID Pipeline Register
     if_id_reg if_id_reg (
         .clk(clk),
-        .stall(stall),
+        .stall(load_use_stall),
         .flush(branch_flush | predict_taken),
         .rst(rst),
         .pc_addr_in(pc_addr),
         .pc_plus4_in(pc_plus4),
-        .instr_in(instr),
+        .instr_in(icache_instr),
         .pc_addr(if_id_pc_addr),
         .pc_plus4(if_id_pc_plus4),
         .instr(if_id_instr)
@@ -112,7 +155,7 @@ module riscv_core (
         .id_ex_rd(id_ex_rd),
         .if_id_rs1(if_id_instr[19:15]),
         .if_id_rs2(if_id_instr[24:20]),
-        .stall(stall),
+        .stall(load_use_stall),
         .flush_id_ex(flush_id_ex)
     );
 
