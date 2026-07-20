@@ -21,11 +21,12 @@ VERILOG_SOURCES += \
 	$(PWD)/../../rtl/core/hazard_detection_unit.sv \
 	$(PWD)/../../rtl/core/branch_flush_unit.sv \
 	$(PWD)/../../rtl/core/branch_predictor.sv \
+	$(PWD)/../../rtl/core/icache.sv \
 	$(PWD)/../../rtl/core/riscv_core.sv
 
 TOPLEVEL = riscv_core
 
-MODULE = test_riscv_core_branch_predictor
+MODULE = test_riscv_core_icache
 
 EXTRA_ARGS += --trace
 

@@ -27,8 +27,6 @@ module riscv_core (
     logic [31:0] saved_pc;
     logic pc_override;
 
-
-
     // IF/ID Wires
     logic [31:0] if_id_pc_addr, if_id_pc_plus4, if_id_instr;
 
