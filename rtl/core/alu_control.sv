@@ -29,7 +29,7 @@ module alu_control (
                 endcase
             end
 
-            2'b10: begin// R-type / I-ALU -- decide by funct3,7
+            2'b10: begin// R-type -- decide by funct7_bit5, funct3
                 casez ({funct7_5, funct3}) //casez is used for wildcard matching with the ? dontcare
                     4'b0000: // ADD
                         alu_ctrl = ALU_ADD;
@@ -65,7 +65,28 @@ module alu_control (
                         alu_ctrl = ALU_ADD;
                 endcase
             end
-
+            2'b11: begin // I-ALU - decide by funct3
+                case (funct3)
+                    F3_ADD_SUB: // addi - always add, ignore bit 30, no funct7
+                        alu_ctrl = ALU_ADD;
+                    F3_SLL: // slli
+                        alu_ctrl = ALU_SLL;
+                    F3_SLT: // slti
+                        alu_ctrl = ALU_SLT;
+                    F3_SLTU: //sltui
+                        alu_ctrl = ALU_SLTU;
+                    F3_XOR: // xori
+                        alu_ctrl = ALU_XOR;
+                    F3_SRL_SRA: //srai vs srli
+                        alu_ctrl = funct7_5 ? ALU_SRA : ALU_SRL; // srai vs srli. can use bit 30 since shifts are 5 bits max
+                    F3_OR: // ori
+                        alu_ctrl = ALU_OR;
+                    F3_AND: // andi
+                        alu_ctrl = ALU_AND;
+                    default:
+                        alu_ctrl = ALU_ADD;
+                endcase
+            end
             default: // Default to ADD
                 alu_ctrl = ALU_ADD;
         endcase

@@ -80,13 +80,13 @@ package riscv_pkg;
   // Tells alu_control.sv how much work it needs to do:
   //   00 -> force ADD        (loads / stores: address = rs1 + imm)
   //   01 -> force SUB        (branches: compare via subtraction)
-  //   10 -> decode from funct3/funct7[5] (R-type and I-type ALU-immediate)
-  //   11 -> unused / don't care (e.g. U-type, J-type: ALU result unused for write-back)
+  //   10 -> decode from funct3/funct7[5] (R-type)
+  //   11 -> decode from funct3 (I-ALU-type)
   // ---------------------------------------------------------------------------
   localparam logic [1:0] ALUOP_LOAD_STORE = 2'b00;
   localparam logic [1:0] ALUOP_BRANCH     = 2'b01;
-  localparam logic [1:0] ALUOP_RTYPE_ITYPE = 2'b10;
-  localparam logic [1:0] ALUOP_DONT_CARE  = 2'b11;
+  localparam logic [1:0] ALUOP_RTYPE = 2'b10;
+  localparam logic [1:0] ALUOP_ITYPE = 2'b11;
 
   // ---------------------------------------------------------------------------
   // ALU control select -- Stage 2 output, drives the ALU's operation mux.

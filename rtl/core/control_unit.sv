@@ -18,11 +18,11 @@ module control_unit (
     always_comb begin
         unique case (opcode)
             OPCODE_R_TYPE: begin
-                 RegWrite = 1; ALUSrc = 0; MemWrite = 0; MemRead = 0; MemToReg = 0; Branch = 0; Jump = 0; ALUOp = ALUOP_RTYPE_ITYPE;
+                 RegWrite = 1; ALUSrc = 0; MemWrite = 0; MemRead = 0; MemToReg = 0; Branch = 0; Jump = 0; ALUOp = ALUOP_RTYPE;
             end
 
             OPCODE_I_ALU: begin
-                RegWrite = 1; ALUSrc = 1; MemWrite = 0; MemRead = 0; MemToReg = 0; Branch = 0; Jump = 0; ALUOp = ALUOP_RTYPE_ITYPE;
+                RegWrite = 1; ALUSrc = 1; MemWrite = 0; MemRead = 0; MemToReg = 0; Branch = 0; Jump = 0; ALUOp = ALUOP_ITYPE;
             end
 
             OPCODE_I_LOAD: begin
