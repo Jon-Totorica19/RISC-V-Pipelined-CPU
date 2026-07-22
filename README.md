@@ -9,23 +9,22 @@ A 5-stage pipelined RV32I processor implemented in SystemVerilog. The pipeline s
 The datapath is divided into five pipeline stages connected by four pipeline registers. Three hazard-handling units — the forwarding unit, hazard detection unit, and branch flush unit — monitor inter-stage signals and control stalling and flushing independently. Two caches intercept memory accesses before they reach the backing stores.
 
 ```
-      ┌──────────────────────────────────────────────────────────────────────────────┐
-      │                         HAZARD / CONTROL PLANE                              │
-      │   ┌──────────────────┐  ┌─────────────────────┐  ┌──────────────────────┐  │
-      │   │  hazard_detect   │  │   forwarding_unit   │  │  branch_flush_unit   │  │
-      │   │  (load-use stall)│  │  (EX/MEM, MEM/WB)  │  │  (mispredict flush)  │  │
-      └───┴──────────────────┴──┴─────────────────────┴──┴──────────────────────┴──┘
-                  │                       │                         │
-   ───────────────┼───────────────────────┼─────────────────────────┼──────────────
-   IF             │         ID            │          EX              │   MEM      WB
-   ───────────────┼───────────────────────┼─────────────────────────┼──────────────
-  ┌────────┐      │    ┌────────────┐     │    ┌───────────┐         │  ┌──────┐  ┌────┐
-  │icache  │      │    │control_unit│     │    │    alu    │         │  │dcache│  │reg │
-  │        │  IF/ID   │ imm_gen   │  ID/EX   │alu_control│  EX/MEM │  │      │MEM/WB file│
-  │  +     ├──────►   │ reg_file  ├──────►   │forwarding ├─────────►  │  +   ├──────►WB │
-  │instr_  │      │   │branch_pred│     │    │muxes      │         │  │data_ │  │    │
-  │  mem   │      │   └────────────┘     │    └───────────┘         │  │ mem  │  └────┘
-  └────────┘      │                      │                          │  └──────┘
+ ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                  HAZARD / CONTROL PLANE                                         │
+ │  ┌───────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐  │
+ │  │    hazard_detect      │     │      forwarding_unit      │     │    branch_flush_unit      │  │
+ │  │   (load-use stall)    │     │      (EX/MEM, MEM/WB)     │     │    (mispredict flush)     │  │
+ │  └───────────────────────┘     └───────────────────────────┘     └───────────────────────────┘  │
+ └──────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ┌──────────┐  IF/ID  ┌──────────────┐  ID/EX  ┌──────────────┐  EX/MEM  ┌──────────┐  MEM/WB  ┌──────────┐
+ │    IF    ├────────►│      ID      ├────────►│      EX      ├─────────►│   MEM    ├─────────►│    WB    │
+ ├──────────┤         ├──────────────┤         ├──────────────┤          ├──────────┤          ├──────────┤
+ │ icache   │         │ control_unit │         │ alu          │          │ dcache   │          │ reg_file │
+ │ instr_mem│         │ imm_gen      │         │ alu_control  │          │ data_mem │          │          │
+ │          │         │ reg_file     │         │ forwarding   │          │          │          │          │
+ │          │         │ branch_pred  │         │ muxes        │          │          │          │          │
+ └──────────┘         └──────────────┘         └──────────────┘          └──────────┘          └──────────┘
 ```
 
 ### Pipeline Stage Summary
@@ -89,12 +88,13 @@ Counter states:
 ```
 
 **Prediction outcome:**
-- **Correct prediction:** 0 penalty cycles
-- **Misprediction:** 2-cycle flush (IF and ID stages flushed via ID/EX flush)
+- **Correct prediction, not taken:** 0 penalty cycles — the sequentially fetched instruction was correct
+- **Correct prediction, taken:** 1 penalty cycle — `predict_taken=1` fires in ID and immediately redirects the PC to the branch target, but the instruction already in IF (fetched at PC+4 before the prediction was known) must be discarded; only IF/ID is flushed
+- **Misprediction:** 2-cycle penalty — the PC is redirected in EX; both IF/ID and ID/EX are flushed, discarding the two instructions already fetched down the wrong path
 
-No branch target buffer (BTB) is needed because the branch target is computed in the ID stage alongside the prediction — both are available at the same time.
+No branch target buffer (BTB) is needed because the branch target (PC + imm) is computed in the ID stage alongside the prediction — both are available at the same time.
 
-**Jump instructions (JAL/JALR)** always flush the ID/EX register (1 fetched instruction discarded) since the target is not known until EX.
+**Jump instructions (JAL/JALR)** have a 2-cycle penalty, the same as a misprediction. Unlike branches, jumps are not fed through the branch predictor — the PC redirect only happens when the jump reaches EX (`id_ex_Jump=1`). At that point two wrong instructions have already entered the pipeline (PC+4 in ID, PC+8 in IF). The branch_flush_unit fires and flushes both IF/ID and ID/EX, discarding both.
 
 The branch flush unit fires on:
 ```
@@ -196,14 +196,19 @@ Each pipeline register responds to stall and/or flush signals from the hazard un
 
 | Register | Stall source | Flush source |
 |----------|-------------|-------------|
-| IF/ID | load-use stall, icache stall, dcache stall | branch misprediction / jump |
-| ID/EX | load-use stall, dcache stall | load-use bubble, branch misprediction / jump |
+| PC | load-use stall, icache stall, dcache stall | — |
+| IF/ID | load-use stall, dcache stall | branch flush (misprediction / jump), predict_taken (correct taken branch) |
+| ID/EX | dcache stall | load-use bubble (flush_id_ex), branch flush (misprediction / jump) |
 | EX/MEM | dcache stall | — |
 | MEM/WB | — | dcache stall |
 
-On stall, a register holds its current value. On flush, a register zeroes all outputs (equivalent to a NOP propagating through the pipeline). MEM/WB flushes on dcache stall to prevent a stale result from being written to the register file while the load/store waits for the cache.
+On stall, a register holds its current value. On flush, a register zeroes all outputs (NOP propagates forward).
 
-PC stall sources are OR'd together: `stall = load_use_stall | icache_stall | dcache_stall`.
+Key distinctions:
+- **Load-use hazard** stalls PC and IF/ID (freezing them) and flushes ID/EX (inserting a bubble into EX). ID/EX does not stall — it flushes.
+- **Correct taken branch** (`predict_taken=1`) flushes only IF/ID — the redirect happens in ID so only the one instruction already in IF is wrong.
+- **Misprediction or jump** (`branch_flush=1`) flushes both IF/ID and ID/EX — the redirect happens in EX so two instructions are wrong.
+- **icache stall** only freezes the PC. IF/ID keeps receiving the icache output (which is 0/NOP during a miss), so no explicit IF/ID stall is needed.
 
 ---
 
