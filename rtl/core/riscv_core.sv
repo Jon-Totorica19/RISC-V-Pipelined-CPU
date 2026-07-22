@@ -12,7 +12,7 @@ module riscv_core (
     logic [31:0] imm;
     logic [31:0] alu_a, alu_b, alu_result;
     logic        zero;
-    logic [31:0] read_data, write_back;
+    logic [31:0] mem_read_data, write_back;
     logic        RegWrite, ALUSrc, MemWrite, MemRead, MemToReg, Branch, Jump;
     logic [1:0]  ALUOp;
     logic [3:0]  alu_ctrl;
@@ -44,6 +44,10 @@ module riscv_core (
     logic [4:0] ex_mem_rd;
     logic ex_mem_RegWrite, ex_mem_MemRead, ex_mem_MemWrite, ex_mem_MemToReg, ex_mem_Jump;
 
+    // Data Cache Wires
+    logic dcache_stall, dcache_mem_read, dcache_mem_write;
+    logic [31:0] dcache_mem_addr, dcache_read_data, dcache_mem_write_data;
+
     // MEM/WB Wires
     logic [31:0] mem_wb_pc_plus4, mem_wb_alu_result, mem_wb_read_data;
     logic [4:0] mem_wb_rd;
@@ -65,7 +69,7 @@ module riscv_core (
     pc PC (
         .clk(clk),
         .rst(rst),
-        .stall(load_use_stall | icache_stall),
+        .stall(load_use_stall | icache_stall | dcache_stall),
         .next_pc(final_next_pc),
         .pc_addr(pc_addr)
     );
@@ -115,7 +119,7 @@ module riscv_core (
     // IF/ID Pipeline Register
     if_id_reg if_id_reg (
         .clk(clk),
-        .stall(load_use_stall),
+        .stall(load_use_stall | dcache_stall),
         .flush(branch_flush | predict_taken),
         .rst(rst),
         .pc_addr_in(pc_addr),
@@ -188,6 +192,7 @@ module riscv_core (
     // ID/EX Pipeline Register
     id_ex_reg id_ex_reg (
         .clk(clk),
+        .stall(dcache_stall),
         .flush(flush_id_ex | branch_flush),
         .rst(rst),
         .pc_addr_in(if_id_pc_addr),
@@ -317,6 +322,7 @@ module riscv_core (
     ex_mem_reg ex_mem_reg (
         .clk(clk),
         .rst(rst),
+        .stall(dcache_stall),
         .pc_plus4_in(id_ex_pc_plus4),
         .alu_result_in(alu_result),
         .rd2_in(fwd_b),
@@ -337,23 +343,40 @@ module riscv_core (
         .Jump(ex_mem_Jump)
     );
 
-    // Mem Stage: data_mem
-    data_mem data_mem (
-        .MemRead(ex_mem_MemRead),
-        .MemWrite(ex_mem_MemWrite),
+    dcache dcache (
         .clk(clk),
-        .writeData(ex_mem_rd2),
-        .addr(ex_mem_alu_result), 
-        .readData(read_data)
+        .rst(rst),
+        .read_en(ex_mem_MemRead),
+        .write_en(ex_mem_MemWrite),
+        .addr(ex_mem_alu_result),
+        .mem_data(mem_read_data),
+        .write_data(ex_mem_rd2),
+        .stall(dcache_stall),
+        .mem_read(dcache_mem_read),
+        .mem_write(dcache_mem_write),
+        .mem_addr(dcache_mem_addr),
+        .read_data(dcache_read_data),
+        .mem_write_data(dcache_mem_write_data)
+    );
+
+    // Mem Stage: dcache, data_mem
+    data_mem data_mem (
+        .MemRead(dcache_mem_read),
+        .MemWrite(dcache_mem_write),
+        .clk(clk),
+        .writeData(dcache_mem_write_data),
+        .addr(dcache_mem_addr), 
+        .readData(mem_read_data)
     );
 
     // MEM/WB Pipeline Reg
     mem_wb_reg mem_wb_reg (
         .clk(clk),
         .rst(rst),
+        .flush(dcache_stall),
         .pc_plus4_in(ex_mem_pc_plus4),
         .alu_result_in(ex_mem_alu_result),
-        .read_data_in(read_data),
+        .read_data_in(dcache_read_data),
         .rd_in(ex_mem_rd),
         .RegWrite_in(ex_mem_RegWrite),
         .MemToReg_in(ex_mem_MemToReg),

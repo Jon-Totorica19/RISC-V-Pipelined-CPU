@@ -1,7 +1,7 @@
 // ID/EX Reg
 
 module id_ex_reg (
-    input logic clk, flush, rst,
+    input logic clk, flush, rst, stall,
     input logic [31:0] pc_addr_in, pc_plus4_in, rd1_in, rd2_in, imm_in,
     input logic [4:0] rs1_in, rs2_in, rd_in, 
     input logic [2:0] funct3_in,
@@ -42,6 +42,30 @@ module id_ex_reg (
             is_auipc <= 0; 
             ALUOp <= 0;
             predicted_taken <= 0;
+        end
+        else if (stall) begin
+            pc_addr <= pc_addr;
+            pc_plus4 <= pc_plus4;
+            rd1 <= rd1;
+            rd2 <= rd2;
+            imm <= imm;
+            rs1 <= rs1;
+            rs2 <= rs2;
+            rd <= rd; 
+            funct3 <= funct3;
+            funct7_5 <= funct7_5; 
+            RegWrite <= RegWrite;
+            ALUSrc <= ALUSrc;
+            MemRead <= MemRead;
+            MemWrite <= MemWrite;
+            MemToReg <= MemToReg;
+            Branch <= Branch;
+            Jump <= Jump;
+            is_jalr <= is_jalr;
+            is_lui <= is_lui;
+            is_auipc <= is_auipc; 
+            ALUOp <= ALUOp;
+            predicted_taken <= predicted_taken;
         end
         else begin
             pc_addr <= pc_addr_in;

@@ -1,7 +1,7 @@
 // MEM/WB
 
 module mem_wb_reg (
-    input logic clk, rst,
+    input logic clk, rst, flush,
     input logic [31:0] pc_plus4_in, alu_result_in, read_data_in,
     input logic [4:0] rd_in, 
     input logic RegWrite_in, MemToReg_in, Jump_in,
@@ -11,7 +11,7 @@ module mem_wb_reg (
 );
 
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (rst | flush) begin
             pc_plus4 <= 0;
             alu_result <= 0;
             read_data <= 0;

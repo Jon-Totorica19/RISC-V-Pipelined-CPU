@@ -1,7 +1,7 @@
 // EX/MEM Reg
 
 module ex_mem_reg (
-    input logic clk, rst,
+    input logic clk, rst, stall,
     input logic [31:0] pc_plus4_in, alu_result_in, rd2_in, // rd2 is forwarded store data
     input logic [4:0] rd_in,
     input logic RegWrite_in, MemRead_in, MemWrite_in, MemToReg_in, Jump_in,
@@ -21,6 +21,17 @@ module ex_mem_reg (
             MemWrite <= 0;
             MemToReg <= 0;
             Jump <= 0;
+        end
+        else if (stall) begin
+            pc_plus4 <= pc_plus4;
+            alu_result <= alu_result;
+            rd2 <= rd2;
+            rd <= rd;
+            RegWrite <= RegWrite;
+            MemRead <= MemRead;
+            MemWrite <= MemWrite;
+            MemToReg <= MemToReg;
+            Jump <= Jump;
         end
         else begin
             pc_plus4 <= pc_plus4_in;
