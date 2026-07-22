@@ -27,7 +27,7 @@ VERILOG_SOURCES += \
 
 TOPLEVEL = riscv_core
 
-MODULE = test_riscv_core_dcache
+MODULE = test_riscv_core_bubble_sort
 
 EXTRA_ARGS += --trace
 

@@ -119,7 +119,7 @@ Both caches are 256B, direct-mapped, with one 32-bit word per block. The address
 - **Policy:** Read-only (instructions are never written)
 - **Hit latency:** 1 cycle (combinational read)
 - **Miss penalty:** 10 cycles (models DRAM access delay)
-- **Stall behavior:** On miss, stalls PC and IF/ID for 10 cycles; a flush input resets the miss counter if a branch redirects the PC mid-miss
+- **Stall behavior:** On miss, stalls only the PC for 10 cycles; the icache outputs instr=0 (NOP) during a miss so IF/ID continues flowing harmlessly without an explicit stall
 
 On a miss, `stall=1` and `mem_read=1` are asserted, freezing the front of the pipeline while the backing `instr_mem` fulfills the fetch. After 10 cycles the cache line is filled and `stall` deasserts.
 
