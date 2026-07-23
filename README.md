@@ -6,6 +6,8 @@ A 5-stage pipelined RV32I processor implemented in SystemVerilog. The pipeline s
 
 ## Architecture
 
+![RV32I 5-Stage Pipelined Datapath](docs/rv32i_pipeline_datapath.png)
+
 The datapath is divided into five pipeline stages connected by four pipeline registers. Three hazard-handling units — the forwarding unit, hazard detection unit, and branch flush unit — monitor inter-stage signals and control stalling and flushing independently. Two caches intercept memory accesses before they reach the backing stores.
 
 ```
