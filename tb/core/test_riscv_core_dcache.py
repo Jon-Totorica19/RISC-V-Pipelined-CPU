@@ -51,22 +51,22 @@ async def test_dcache(dut):
     for _ in range(300):
         await RisingEdge(dut.clk)
 
-    assert dut.reg_file.regs[1].value == 7, f"Reg x1: {dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 7, f"Reg x1: {dut.riscv_core.reg_file.regs[1].value}"
 
-    assert dut.reg_file.regs[2].value == 7, f"Reg x2: {dut.reg_file.regs[2].value}"
+    assert dut.riscv_core.reg_file.regs[2].value == 7, f"Reg x2: {dut.riscv_core.reg_file.regs[2].value}"
 
-    assert dut.reg_file.regs[3].value == 99, f"Reg x3: {dut.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 99, f"Reg x3: {dut.riscv_core.reg_file.regs[3].value}"
 
-    assert dut.reg_file.regs[4].value == 200, f"Reg x4: {dut.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 200, f"Reg x4: {dut.riscv_core.reg_file.regs[4].value}"
 
-    assert dut.reg_file.regs[5].value == 77, f"Reg x5: {dut.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[5].value == 77, f"Reg x5: {dut.riscv_core.reg_file.regs[5].value}"
 
-    assert dut.reg_file.regs[6].value == 7, f"Reg x6: {dut.reg_file.regs[6].value}"
+    assert dut.riscv_core.reg_file.regs[6].value == 7, f"Reg x6: {dut.riscv_core.reg_file.regs[6].value}"
 
-    assert dut.reg_file.regs[7].value == 100, f"Reg x7: {dut.reg_file.regs[7].value}"
+    assert dut.riscv_core.reg_file.regs[7].value == 100, f"Reg x7: {dut.riscv_core.reg_file.regs[7].value}"
 
-    assert dut.reg_file.regs[8].value == 7, f"Reg x8: {dut.reg_file.regs[8].value}"
+    assert dut.riscv_core.reg_file.regs[8].value == 7, f"Reg x8: {dut.riscv_core.reg_file.regs[8].value}"
 
     assert dut.data_mem.mem[0].value == 55, f"Mem[0]: {dut.data_mem.mem[0].value}"
 
-    assert dut.reg_file.regs[9].value == 100, f"Reg x9: {dut.reg_file.regs[9].value}"
+    assert dut.riscv_core.reg_file.regs[9].value == 100, f"Reg x9: {dut.riscv_core.reg_file.regs[9].value}"

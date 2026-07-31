@@ -48,23 +48,23 @@ async def test_jumps(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[1].value == 0x08, f"reg x1: {dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 0x08, f"reg x1: {dut.riscv_core.reg_file.regs[1].value}"
 
     # Instr 5 complete. Instr 6 WB. Instr 7: MEM. Instr 8,9 flushed. Instr 10: target IF
     for _ in range(3):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[10].value == 0x01, f"reg x10: {dut.reg_file.regs[10].value}"
+    assert dut.riscv_core.reg_file.regs[10].value == 0x01, f"reg x10: {dut.riscv_core.reg_file.regs[10].value}"
 
     # Instr 6, 7, 10 complete
     for _ in range(7):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[2].value == 0x24, f"reg x2: {dut.reg_file.regs[2].value}"
-    assert dut.reg_file.regs[3].value == 0x1C, f"reg x3: {dut.reg_file.regs[3].value}"
-    assert dut.reg_file.regs[11].value == 0x2, f"reg x11: {dut.reg_file.regs[11].value}"
+    assert dut.riscv_core.reg_file.regs[2].value == 0x24, f"reg x2: {dut.riscv_core.reg_file.regs[2].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 0x1C, f"reg x3: {dut.riscv_core.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[11].value == 0x2, f"reg x11: {dut.riscv_core.reg_file.regs[11].value}"
 
 
 

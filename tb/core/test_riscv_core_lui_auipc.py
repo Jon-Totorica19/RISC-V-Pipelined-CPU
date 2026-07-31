@@ -46,5 +46,5 @@ async def test_lui_auipc(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[5].value == 0xBEEFF000, f"Reg x5: {dut.reg_file.regs[5].value}"
-    assert dut.reg_file.regs[6].value == 0x100C, f"Reg x5: {dut.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[5].value == 0xBEEFF000, f"Reg x5: {dut.riscv_core.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[6].value == 0x100C, f"Reg x5: {dut.riscv_core.reg_file.regs[5].value}"

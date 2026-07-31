@@ -1,0 +1,5 @@
+read_liberty /home/jttoto7/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+read_verilog synth_netlist.v
+link_design riscv_core
+read_sdc constraints.sdc
+report_checks

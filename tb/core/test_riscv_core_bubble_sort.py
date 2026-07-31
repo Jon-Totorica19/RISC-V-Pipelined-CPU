@@ -43,12 +43,12 @@ async def test_bubble_sort(dut):
 
     # Sorted array is in dcache (write-back, never evicted to data_mem).
     # Program loads arr[0..4] into x20-x24 before halting so we can assert registers.
-    assert dut.reg_file.regs[20].value == 1, f"arr[0]: expected 1, got {dut.reg_file.regs[20].value}"
+    assert dut.riscv_core.reg_file.regs[20].value == 1, f"arr[0]: expected 1, got {dut.riscv_core.reg_file.regs[20].value}"
 
-    assert dut.reg_file.regs[21].value == 3, f"arr[1]: expected 3, got {dut.reg_file.regs[21].value}"
+    assert dut.riscv_core.reg_file.regs[21].value == 3, f"arr[1]: expected 3, got {dut.riscv_core.reg_file.regs[21].value}"
 
-    assert dut.reg_file.regs[22].value == 4, f"arr[2]: expected 4, got {dut.reg_file.regs[22].value}"
+    assert dut.riscv_core.reg_file.regs[22].value == 4, f"arr[2]: expected 4, got {dut.riscv_core.reg_file.regs[22].value}"
 
-    assert dut.reg_file.regs[23].value == 5, f"arr[3]: expected 5, got {dut.reg_file.regs[23].value}"
+    assert dut.riscv_core.reg_file.regs[23].value == 5, f"arr[3]: expected 5, got {dut.riscv_core.reg_file.regs[23].value}"
     
-    assert dut.reg_file.regs[24].value == 8, f"arr[4]: expected 8, got {dut.reg_file.regs[24].value}"
+    assert dut.riscv_core.reg_file.regs[24].value == 8, f"arr[4]: expected 8, got {dut.riscv_core.reg_file.regs[24].value}"

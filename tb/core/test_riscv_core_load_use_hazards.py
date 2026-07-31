@@ -51,18 +51,18 @@ async def test_load_use_hazards(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[4].value == 25, f"Reg x4: {dut.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 25, f"Reg x4: {dut.riscv_core.reg_file.regs[4].value}"
 
     # Instr 7-8
     for _ in range(3):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[6].value == 25, f"Reg x6: {dut.reg_file.regs[6].value}"
+    assert dut.riscv_core.reg_file.regs[6].value == 25, f"Reg x6: {dut.riscv_core.reg_file.regs[6].value}"
 
     # Instr 9-10
     for _ in range(3):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[8].value == 40, f"Reg x8: {dut.reg_file.regs[8].value}"
+    assert dut.riscv_core.reg_file.regs[8].value == 40, f"Reg x8: {dut.riscv_core.reg_file.regs[8].value}"

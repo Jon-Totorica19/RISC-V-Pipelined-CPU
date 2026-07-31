@@ -3,16 +3,20 @@
 import riscv_pkg::*;
 
 module riscv_core (
-    input logic clk, rst
+    input logic clk, rst,
+    input logic [31:0] instr, mem_read_data,
+
+    output logic icache_mem_read, dcache_mem_read, dcache_mem_write,
+    output logic [31:0] icache_mem_addr, dcache_mem_addr, dcache_mem_write_data
 );
+
     // Core Wires
     logic [31:0] pc_addr, next_pc, pc_plus4, pc_target;
-    logic [31:0] instr;
     logic [31:0] rd1, rd2;
     logic [31:0] imm;
     logic [31:0] alu_a, alu_b, alu_result;
     logic        zero;
-    logic [31:0] mem_read_data, write_back;
+    logic [31:0] write_back;
     logic        RegWrite, ALUSrc, MemWrite, MemRead, MemToReg, Branch, Jump;
     logic [1:0]  ALUOp;
     logic [3:0]  alu_ctrl;
@@ -21,8 +25,8 @@ module riscv_core (
     logic branch_taken;
 
     // Instr Cache Wires
-    logic icache_mem_read, icache_read_en, icache_stall;
-    logic [31:0] icache_instr, icache_mem_addr;
+    logic icache_read_en, icache_stall;
+    logic [31:0] icache_instr;
     logic [31:0] final_next_pc;
     logic [31:0] saved_pc;
     logic pc_override;
@@ -45,8 +49,8 @@ module riscv_core (
     logic ex_mem_RegWrite, ex_mem_MemRead, ex_mem_MemWrite, ex_mem_MemToReg, ex_mem_Jump;
 
     // Data Cache Wires
-    logic dcache_stall, dcache_mem_read, dcache_mem_write;
-    logic [31:0] dcache_mem_addr, dcache_read_data, dcache_mem_write_data;
+    logic dcache_stall;
+    logic [31:0] dcache_read_data;
 
     // MEM/WB Wires
     logic [31:0] mem_wb_pc_plus4, mem_wb_alu_result, mem_wb_read_data;
@@ -65,7 +69,7 @@ module riscv_core (
     logic [31:0] id_prediction_target;
 
 
-    // IF Stage: pc, instr cache, instr_mem, pc+4 (Adder)
+    // IF Stage: pc, instr cache, pc+4 (Adder)
     pc PC (
         .clk(clk),
         .rst(rst),
@@ -104,13 +108,6 @@ module riscv_core (
         .mem_read(icache_mem_read),
         .instr(icache_instr),
         .mem_addr(icache_mem_addr)
-    );
-
-    instr_mem instr_mem (
-        .clk(clk),
-        .read_en(icache_mem_read),
-        .addr(icache_mem_addr),
-        .instr(instr)
     );
 
     // Increment PC
@@ -343,6 +340,8 @@ module riscv_core (
         .Jump(ex_mem_Jump)
     );
 
+    // Mem Stage: dcache
+
     dcache dcache (
         .clk(clk),
         .rst(rst),
@@ -357,16 +356,6 @@ module riscv_core (
         .mem_addr(dcache_mem_addr),
         .read_data(dcache_read_data),
         .mem_write_data(dcache_mem_write_data)
-    );
-
-    // Mem Stage: dcache, data_mem
-    data_mem data_mem (
-        .MemRead(dcache_mem_read),
-        .MemWrite(dcache_mem_write),
-        .clk(clk),
-        .writeData(dcache_mem_write_data),
-        .addr(dcache_mem_addr), 
-        .readData(mem_read_data)
     );
 
     // MEM/WB Pipeline Reg

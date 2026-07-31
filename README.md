@@ -29,6 +29,8 @@ The datapath is divided into five pipeline stages connected by four pipeline reg
  └──────────┘         └──────────────┘         └──────────────┘          └──────────┘          └──────────┘
 ```
 
+> **Note:** the diagram above shows logical dataflow. Physically, `instr_mem` and `data_mem` are not inside `riscv_core` — they are separate modules instantiated alongside the core in `riscv_top`, connected via a bus interface. `icache` and `dcache` remain inside `riscv_core` (their hit/miss timing is tightly coupled to pipeline stall logic — the same reason real CPU L1 caches are considered part of the core). See **Synthesis & Static Timing Analysis** below for why this boundary matters.
+
 ### Pipeline Stage Summary
 
 | Stage | Abbrev | Key Work |
@@ -168,18 +170,19 @@ R-type and I-type are given separate `ALUOp` values (`10` vs `11`) to prevent ne
 ## Modules
 
 | Module | File | Description |
-|--------|------|-------------|
-| `riscv_core` | `rtl/core/riscv_core.sv` | Top-level datapath wiring |
+|--------|------|--------------|
+| `riscv_top` | `rtl/core/riscv_top.sv` | Top-level system: instantiates the core and both backing memories, wired via a bus interface |
+| `riscv_core` | `rtl/core/riscv_core.sv` | CPU datapath, control, and both L1 caches — the synthesis boundary; exposes instruction/data memory access as bus ports rather than containing the backing memories directly |
 | `pc` | `rtl/core/pc.sv` | Program counter with stall and synchronous reset |
-| `instr_mem` | `rtl/core/instr_mem.sv` | 256-word instruction ROM |
-| `icache` | `rtl/core/icache.sv` | 256B direct-mapped L1 instruction cache |
-| `dcache` | `rtl/core/dcache.sv` | 256B direct-mapped L1 data cache, write-back/write-allocate |
+| `instr_mem` | `rtl/core/instr_mem.sv` | 256-word instruction ROM (sibling of the core, not nested inside it) |
+| `icache` | `rtl/core/icache.sv` | 256B direct-mapped L1 instruction cache (inside `riscv_core`) |
+| `dcache` | `rtl/core/dcache.sv` | 256B direct-mapped L1 data cache, write-back/write-allocate (inside `riscv_core`) |
 | `control_unit` | `rtl/core/control_unit.sv` | Main control signal decoder |
 | `alu_control` | `rtl/core/alu_control.sv` | Two-stage ALU operation decoder |
 | `alu` | `rtl/core/alu.sv` | 10-operation arithmetic logic unit |
 | `reg_file` | `rtl/core/reg_file.sv` | 32×32 register file, x0 hardwired to 0 |
 | `imm_gen` | `rtl/core/imm_gen.sv` | Immediate sign-extension for all RV32I formats |
-| `data_mem` | `rtl/core/data_mem.sv` | 256-word data RAM (word-aligned, synchronous write) |
+| `data_mem` | `rtl/core/data_mem.sv` | 256-word data RAM (word-aligned, synchronous write), sibling of the core |
 | `if_id_reg` | `rtl/core/if_id_reg.sv` | IF/ID pipeline register with stall and flush |
 | `id_ex_reg` | `rtl/core/id_ex_reg.sv` | ID/EX pipeline register with stall and flush |
 | `ex_mem_reg` | `rtl/core/ex_mem_reg.sv` | EX/MEM pipeline register with stall |
@@ -266,7 +269,8 @@ Key distinctions:
 │   ├── common/
 │   │   └── riscv_pkg.sv            # Shared package: opcodes, funct3/7, ALU codes
 │   └── core/
-│       ├── riscv_core.sv           # Top-level core, all datapath wiring
+│       ├── riscv_top.sv            # Top-level system: core + instruction/data memory
+│       ├── riscv_core.sv           # CPU datapath, control, and caches (synthesis boundary)
 │       ├── pc.sv                   # Program counter
 │       ├── instr_mem.sv            # Instruction ROM
 │       ├── icache.sv               # L1 instruction cache
@@ -379,3 +383,65 @@ This produces `.o`, `.elf`, and `.hex` files. Only `.hex` files are loaded by th
 | cocotb | Python testbench framework |
 | GTKWave | Waveform viewer |
 | riscv64-unknown-elf | RISC-V assembler and linker |
+
+## Synthesis & Static Timing Analysis
+
+Synthesized with Yosys 0.67 targeting the SkyWater SKY130 (`sky130_fd_sc_hd`, typical corner) standard cell library; timing analyzed with OpenSTA 3.1.0. Synthesis targets `riscv_core` alone (compute, control, pipeline registers, and both caches) — `instr_mem`/`data_mem` are excluded, matching standard practice: a CPU core's synthesis boundary is its bus interface, not the backing memory behind it.
+
+**Netlist:** 26,925 standard cells total across `riscv_core` and its 16 submodules. Two submodules dominate: `dcache` (10,324 cells) and `icache` (9,748 cells) together account for roughly 75% of the entire design — far more than `reg_file` (2,981 cells) or `alu` (1,039 cells). Both caches synthesize this large because their 64-entry arrays (valid/tag/data per line) are implemented as flip-flops plus a wide read-select structure for indexing the array by a variable address — the same pattern seen in `reg_file`/`data_mem`, just at a larger scale.
+
+**Critical path:** `ex_mem_reg` (the registered ALU result — a memory address) → `dcache`'s tag/valid array comparison logic → `dcache`'s `stall` output → `if_id_reg`'s stall input. Data arrival time: **45.86ns**.
+
+```
+Startpoint: ex_mem_reg/_852_ (rising edge-triggered flip-flop clocked by clk)
+Endpoint: if_id_reg/_790_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ ex_mem_reg/_852_/CLK (sky130_fd_sc_hd__dfxtp_1)
+   0.73    0.73 ^ ex_mem_reg/_852_/Q (sky130_fd_sc_hd__dfxtp_1)
+  23.92   24.65 ^ dcache/_22665_/Y (sky130_fd_sc_hd__nor3b_1)
+   3.21   27.86 v dcache/_23019_/Y (sky130_fd_sc_hd__a222oi_1)
+   1.46   29.32 ^ dcache/_23020_/Y (sky130_fd_sc_hd__a41oi_1)
+   0.17   29.49 v dcache/_23043_/Y (sky130_fd_sc_hd__nor4_1)
+   0.21   29.69 v dcache/_23205_/X (sky130_fd_sc_hd__and3_1)
+   0.35   30.04 ^ dcache/_23245_/Y (sky130_fd_sc_hd__a2111oi_0)
+   0.13   30.16 v dcache/_23325_/Y (sky130_fd_sc_hd__nand4_1)
+   0.64   30.81 ^ dcache/_23742_/Y (sky130_fd_sc_hd__nor4_1)
+   0.10   30.91 v dcache/_24948_/Y (sky130_fd_sc_hd__nor2_1)
+   0.29   31.20 ^ dcache/_24949_/Y (sky130_fd_sc_hd__nor2_1)
+   9.04   40.25 v dcache/_24950_/Y (sky130_fd_sc_hd__clkinv_1)
+   5.00   45.24 v _3597_/X (sky130_fd_sc_hd__lpflow_inputiso1p_1)
+   0.56   45.80 ^ if_id_reg/_732_/Y (sky130_fd_sc_hd__mux2i_1)
+   0.06   45.86 v if_id_reg/_733_/Y (sky130_fd_sc_hd__nor2_1)
+   0.00   45.86 v if_id_reg/_790_/D (sky130_fd_sc_hd__dfxtp_1)
+          45.86   data arrival time
+
+  10.00   10.00   clock clk (rise edge)
+   0.00   10.00   clock network delay (ideal)
+   0.00   10.00   clock reconvergence pessimism
+          10.00 ^ if_id_reg/_790_/CLK (sky130_fd_sc_hd__dfxtp_1)
+  -0.20    9.80   library setup time
+           9.80   data required time
+---------------------------------------------------------
+           9.80   data required time
+         -45.86   data arrival time
+---------------------------------------------------------
+         -36.06   slack (VIOLATED)
+```
+
+**Max frequency:** ≈21.7MHz (45.86ns critical path + 0.20ns setup margin). Violates a 100MHz (10ns) test constraint by a wide margin (slack -36.06ns).
+
+**Root cause, confirmed by direct netlist inspection:** the first gate in this path (`dcache/_22665_`, a `nor3b_1`) drives its output net to **462 separate downstream gate inputs**, unbuffered — confirmed by grepping the synthesized netlist for every use of that net (464 total occurrences: one declaration, one driving connection, 462 loads). This single gate is almost certainly part of the tag/valid comparison logic shared across all 64 cache entries. Every gate downstream in the path inherits a degraded input transition from this point, which is why even later gates with modest fanout of their own (e.g. the `clkinv_1` driving `dcache`'s `stall` output, with only 4 direct loads) still show inflated delays — signal degradation from the high-fanout gate cascades forward through the rest of the path.
+
+**Why this happens, and how real hardware avoids it:** `icache`/`dcache` are described as behavioral Verilog arrays (`logic [31:0] data [63:0];`) read by a variable index. Yosys has no notion that this is "meant to be a memory" — it synthesizes a flat structure of comparators and muxes to select 1-of-64 values, with no buffering discipline applied to signals that need to reach all 64 entries. Real SRAM is built completely differently: a physical 2D grid of bitcells, addressed by a **row decoder** built as a balanced, buffered tree (roughly log₂64 = 6 levels for 64 entries, each level driving only a handful of loads before re-buffering), with **sense amplifiers** reading a shared bitline rather than computing a wide logical select. Real SRAM macros are also pre-characterized black boxes with a fixed, specified access time in their own timing model — a chip's STA never traces through the macro's internal decode circuitry the way this synthesis had to. This result is the concrete, measured version of a well-known principle: behavioral memory arrays don't scale to synthesis, which is exactly why real chips never build caches or memories this way.
+
+**Comparison to the single-cycle core:** the single-cycle core's critical path (~12-14ns, see the single-cycle repo's synthesis writeup) was dominated by the ALU's signed comparison logic. This pipelined core's critical path is dominated by something the single-cycle core doesn't even have — cache tag-array fanout — a fundamentally different bottleneck, not simply "the same bottleneck, faster." Pipelining didn't fail to help; it solved the ALU bottleneck by splitting work across stages, but introducing caches added a new, larger one, specific to how the caches were modeled in RTL rather than to the pipelining itself.
+
+**Known limitations:**
+- This analysis treats `instr`/`mem_read_data` (from `instr_mem`/`data_mem`) as idealized, zero-delay inputs, since those modules are synthesized separately from the core — the same boundary convention used for the single-cycle core.
+- Exact cell counts and path delays can vary slightly between separate synthesis runs of identical RTL, due to non-deterministic heuristics in ABC's technology-mapping passes (observed directly on the single-cycle core; the same tool behavior applies here).

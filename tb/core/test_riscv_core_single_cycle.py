@@ -48,12 +48,12 @@ async def test_r_type(dut):
 
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[3].value == 15, f"Add failed: x3 = {dut.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 15, f"Add failed: x3 = {dut.riscv_core.reg_file.regs[3].value}"
 
     # SUB instruction run
     await RisingEdge(dut.clk)
     await Timer(1,unit="ns")
-    assert dut.reg_file.regs[4].value == 5, f"Sub failed: x4 = {dut.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 5, f"Sub failed: x4 = {dut.riscv_core.reg_file.regs[4].value}"
 
 # Test I-ALU: ADDI and SRAI
 @cocotb.test()
@@ -74,13 +74,13 @@ async def test_i_alu_type(dut):
     await RisingEdge(dut.clk)
     await Timer(1,unit="ns")
 
-    assert dut.reg_file.regs[1].value == 10, f"Addi failed: x1 = {dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 10, f"Addi failed: x1 = {dut.riscv_core.reg_file.regs[1].value}"
 
     # SRAI 
     await RisingEdge(dut.clk)
     await Timer(1,unit="ns")
 
-    assert dut.reg_file.regs[2].value == 2, f"Addi failed: x1 = {dut.reg_file.regs[2].value}"
+    assert dut.riscv_core.reg_file.regs[2].value == 2, f"Addi failed: x1 = {dut.riscv_core.reg_file.regs[2].value}"
 
 # Test LW, SW
 @cocotb.test()
@@ -106,7 +106,7 @@ async def test_lw_sw(dut):
     await RisingEdge(dut.clk)
     await Timer(1,unit="ns")
 
-    assert dut.reg_file.regs[2].value == 10, f"lw failed: x2 = {dut.reg_file.regs[2].value}"
+    assert dut.riscv_core.reg_file.regs[2].value == 10, f"lw failed: x2 = {dut.riscv_core.reg_file.regs[2].value}"
 
 # Test LUI, AUIPC
 @cocotb.test()
@@ -126,13 +126,13 @@ async def test_lui_auipc(dut):
     await RisingEdge(dut.clk)
     await Timer(1,unit="ns")
 
-    assert dut.reg_file.regs[5].value == 0xBEEFF000, f"lui failed: reg[5] = {dut.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[5].value == 0xBEEFF000, f"lui failed: reg[5] = {dut.riscv_core.reg_file.regs[5].value}"
 
     # auipc
     await RisingEdge(dut.clk)
     await Timer(1,unit="ns")
 
-    assert dut.reg_file.regs[6].value == 0x0000100C, f"auipc failed: x6 = {dut.reg_file.regs[6].value}"
+    assert dut.riscv_core.reg_file.regs[6].value == 0x0000100C, f"auipc failed: x6 = {dut.riscv_core.reg_file.regs[6].value}"
 
 # Test JAL, JALR
 @cocotb.test()
@@ -149,18 +149,18 @@ async def test_jal_jalr(dut):
         await RisingEdge(dut.clk)
 
     await Timer(1, unit="ns")
-    assert dut.reg_file.regs[1].value == 4, f"jal failed x1 = {dut.reg_file[1].value}"
-    assert dut.reg_file.regs[10].value == 0, f"jal failed x10 = {dut.reg_file[10].value}"
-    assert dut.reg_file.regs[2].value == 1, f"jal failed x2 = {dut.reg_file[2].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 4, f"jal failed x1 = {dut.riscv_core.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[10].value == 0, f"jal failed x10 = {dut.riscv_core.reg_file.regs[10].value}"
+    assert dut.riscv_core.reg_file.regs[2].value == 1, f"jal failed x2 = {dut.riscv_core.reg_file.regs[2].value}"
 
     for _ in range(4):
         await RisingEdge(dut.clk)
 
     await Timer(1, unit="ns")
-    assert dut.reg_file.regs[3].value == 28, f"auipc failed x3 = {dut.reg_file[3].value}"
-    assert dut.reg_file.regs[4].value == 24, f"jalr failed x4 = {dut.reg_file[4].value}"
-    assert dut.reg_file.regs[11].value == 0, f"jal failed x11 = {dut.reg_file[11].value}"
-    assert dut.reg_file.regs[7].value == 1, f"jal failed x7 = {dut.reg_file[7].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 28, f"auipc failed x3 = {dut.riscv_core.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 24, f"jalr failed x4 = {dut.riscv_core.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[11].value == 0, f"jal failed x11 = {dut.riscv_core.reg_file.regs[11].value}"
+    assert dut.riscv_core.reg_file.regs[7].value == 1, f"jal failed x7 = {dut.riscv_core.reg_file.regs[7].value}"
 
 # Test B type all of BEQ, BNE, BGE, BLT, BLTU, BGEU
 @cocotb.test()
@@ -181,42 +181,42 @@ async def test_b_type(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[3].value == 1, f"BEQ not taken failed: x3 = {dut.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 1, f"BEQ not taken failed: x3 = {dut.riscv_core.reg_file.regs[3].value}"
 
     # BNE Taken, x4 = 1
     for _ in range(2):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[4].value == 1, f"BNE not taken failed: x4 = {dut.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 1, f"BNE not taken failed: x4 = {dut.riscv_core.reg_file.regs[4].value}"
 
     # BLT Taken, x5 = 1
     for _ in range(2):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[5].value == 1, f"BLT not taken failed: x5 = {dut.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[5].value == 1, f"BLT not taken failed: x5 = {dut.riscv_core.reg_file.regs[5].value}"
 
     # BGE Taken, x6 = 1
     for _ in range(2):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[6].value == 1, f"BGE not taken failed: x6 = {dut.reg_file.regs[6].value}"
+    assert dut.riscv_core.reg_file.regs[6].value == 1, f"BGE not taken failed: x6 = {dut.riscv_core.reg_file.regs[6].value}"
 
     # BLTU Taken, x7 = 1
     for _ in range(2):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[7].value == 1, f"BLTU not taken failed: x7 = {dut.reg_file.regs[7].value}"
+    assert dut.riscv_core.reg_file.regs[7].value == 1, f"BLTU not taken failed: x7 = {dut.riscv_core.reg_file.regs[7].value}"
 
      # BGEU Taken, x6 = 1
     for _ in range(2):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[8].value == 1, f"BGEU not taken failed: x8 = {dut.reg_file.regs[8].value}"
+    assert dut.riscv_core.reg_file.regs[8].value == 1, f"BGEU not taken failed: x8 = {dut.riscv_core.reg_file.regs[8].value}"
 
 
     

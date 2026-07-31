@@ -46,20 +46,20 @@ async def test_data_hazards(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[3].value == 15, f"Reg x3: {dut.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 15, f"Reg x3: {dut.riscv_core.reg_file.regs[3].value}"
 
     # Complete instr 4-7
     for _ in range(4):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[5].value == 18, f"Reg x5: {dut.reg_file.regs[5].value}"
-    assert dut.reg_file.regs[6].value == 36, f"Reg x6: {dut.reg_file.regs[6].value}"
-    assert dut.reg_file.regs[7].value == 36, f"Reg x7: {dut.reg_file.regs[7].value}"
+    assert dut.riscv_core.reg_file.regs[5].value == 18, f"Reg x5: {dut.riscv_core.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[6].value == 36, f"Reg x6: {dut.riscv_core.reg_file.regs[6].value}"
+    assert dut.riscv_core.reg_file.regs[7].value == 36, f"Reg x7: {dut.riscv_core.reg_file.regs[7].value}"
 
     # Complete instr 8-10
     for _ in range(3):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[9].value == 10, f"Reg x9: {dut.reg_file.regs[9].value}"
+    assert dut.riscv_core.reg_file.regs[9].value == 10, f"Reg x9: {dut.riscv_core.reg_file.regs[9].value}"

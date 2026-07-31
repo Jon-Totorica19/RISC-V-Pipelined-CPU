@@ -56,7 +56,7 @@ async def test_integration_test(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[10].value == 1, f"Reg x10: {dut.reg_file.regs[10].value}"
+    assert dut.riscv_core.reg_file.regs[10].value == 1, f"Reg x10: {dut.riscv_core.reg_file.regs[10].value}"
 
     # BGE: MEM. JAL: FLushed. Target ADD: IF
     for _ in range(1):
@@ -99,9 +99,9 @@ async def test_integration_test(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[1].value == 6, f"Reg x1: {dut.reg_file.regs[1].value}"
-    assert dut.reg_file.regs[2].value == 4, f"Reg x2: {dut.reg_file.regs[2].value}"
-    assert dut.reg_file.regs[3].value == 3, f"Reg x3: {dut.reg_file.regs[3].value}"
-    assert dut.reg_file.regs[4].value == 10, f"Reg x4: {dut.reg_file.regs[4].value}"
-    assert dut.reg_file.regs[11].value == 7, f"Reg x7: {dut.reg_file.regs[11].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 6, f"Reg x1: {dut.riscv_core.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[2].value == 4, f"Reg x2: {dut.riscv_core.reg_file.regs[2].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 3, f"Reg x3: {dut.riscv_core.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 10, f"Reg x4: {dut.riscv_core.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[11].value == 7, f"Reg x7: {dut.riscv_core.reg_file.regs[11].value}"
 

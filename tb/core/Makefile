@@ -23,11 +23,12 @@ VERILOG_SOURCES += \
 	$(PWD)/../../rtl/core/branch_predictor.sv \
 	$(PWD)/../../rtl/core/icache.sv \
 	$(PWD)/../../rtl/core/dcache.sv \
-	$(PWD)/../../rtl/core/riscv_core.sv
+	$(PWD)/../../rtl/core/riscv_core.sv \
+	$(PWD)/../../rtl/core/riscv_top.sv
 
-TOPLEVEL = riscv_core
+TOPLEVEL = riscv_top
 
-MODULE = test_riscv_core_bubble_sort
+MODULE = test_riscv_core_icache
 
 EXTRA_ARGS += --trace
 

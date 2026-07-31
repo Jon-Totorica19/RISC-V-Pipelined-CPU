@@ -1,0 +1,25 @@
+read_verilog -sv ../rtl/common/riscv_pkg.sv
+read_verilog -sv ../rtl/core/pc.sv
+read_verilog -sv ../rtl/core/icache.sv
+read_verilog -sv ../rtl/core/dcache.sv
+read_verilog -sv ../rtl/core/if_id_reg.sv
+read_verilog -sv ../rtl/core/id_ex_reg.sv
+read_verilog -sv ../rtl/core/ex_mem_reg.sv
+read_verilog -sv ../rtl/core/mem_wb_reg.sv
+read_verilog -sv ../rtl/core/control_unit.sv
+read_verilog -sv ../rtl/core/alu_control.sv
+read_verilog -sv ../rtl/core/alu.sv
+read_verilog -sv ../rtl/core/reg_file.sv
+read_verilog -sv ../rtl/core/imm_gen.sv
+read_verilog -sv ../rtl/core/hazard_detection_unit.sv
+read_verilog -sv ../rtl/core/forwarding_unit.sv
+read_verilog -sv ../rtl/core/branch_predictor.sv
+read_verilog -sv ../rtl/core/branch_flush_unit.sv
+read_verilog -sv ../rtl/core/riscv_core.sv
+
+hierarchy -top riscv_core
+synth -top riscv_core
+dfflibmap -liberty /home/jttoto7/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+abc -liberty /home/jttoto7/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+write_verilog synth_netlist.v
+stat

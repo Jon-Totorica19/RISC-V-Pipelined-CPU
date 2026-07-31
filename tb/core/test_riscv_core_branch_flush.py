@@ -51,46 +51,46 @@ async def test_branch_flush(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[10].value == 1, f"x10: {dut.reg_file.regs[10].value}"
+    assert dut.riscv_core.reg_file.regs[10].value == 1, f"x10: {dut.riscv_core.reg_file.regs[10].value}"
 
     # BNE Instr, next two, target instr
     for _ in range(8):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[11].value == 2, f"x11: {dut.reg_file.regs[11].value}"
+    assert dut.riscv_core.reg_file.regs[11].value == 2, f"x11: {dut.riscv_core.reg_file.regs[11].value}"
 
     # BLT Instr, next two, target instr
     for _ in range(8):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[12].value == 3, f"x11: {dut.reg_file.regs[12].value}"
+    assert dut.riscv_core.reg_file.regs[12].value == 3, f"x11: {dut.riscv_core.reg_file.regs[12].value}"
 
     # BGE Instr, next two, target instr
     for _ in range(8):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[13].value == 4, f"x11: {dut.reg_file.regs[13].value}"
+    assert dut.riscv_core.reg_file.regs[13].value == 4, f"x11: {dut.riscv_core.reg_file.regs[13].value}"
 
     # BLTU Instr, next two, target instr
     for _ in range(8):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[14].value == 5, f"x11: {dut.reg_file.regs[14].value}"
+    assert dut.riscv_core.reg_file.regs[14].value == 5, f"x11: {dut.riscv_core.reg_file.regs[14].value}"
 
     # BGEU Instr, next two, target instr
     for _ in range(8):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[15].value == 6, f"x11: {dut.reg_file.regs[15].value}"
+    assert dut.riscv_core.reg_file.regs[15].value == 6, f"x11: {dut.riscv_core.reg_file.regs[15].value}"
 
     # BEQ not taken, next instr
     for _ in range(2):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[16].value == 7, f"x11: {dut.reg_file.regs[16].value}"
+    assert dut.riscv_core.reg_file.regs[16].value == 7, f"x11: {dut.riscv_core.reg_file.regs[16].value}"

@@ -45,7 +45,7 @@ async def test_icache(dut):
     stall_count = 0
     for _ in range(11):
         await Timer(1, unit="ns")
-        if dut.icache_stall.value == 1:
+        if dut.riscv_core.icache_stall.value == 1:
             stall_count += 1
         await RisingEdge(dut.clk)
     
@@ -57,7 +57,7 @@ async def test_icache(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[1].value == 3, f"Reg x1: {dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 3, f"Reg x1: {dut.riscv_core.reg_file.regs[1].value}"
 
     # Instr 2 completes miss penalty
     for _ in range(6):
@@ -68,7 +68,7 @@ async def test_icache(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns")
 
-    assert dut.reg_file.regs[1].value == 2, f"Reg x1: {dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 2, f"Reg x1: {dut.riscv_core.reg_file.regs[1].value}"
 
     # Instr 3 completes miss penalty
     for _ in range(6):
@@ -83,7 +83,7 @@ async def test_icache(dut):
         await RisingEdge(dut.clk)
     await Timer(1, unit="ns") 
 
-    assert dut.reg_file.regs[1].value == 2, f"Reg x1: {dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 2, f"Reg x1: {dut.riscv_core.reg_file.regs[1].value}"
 
     # Instr 3 iter 2, ID. Instr 4, IF, but it is a miss. Predict branch taken during miss cycle 1 of instr 4.
     for _ in range(1):
@@ -96,17 +96,17 @@ async def test_icache(dut):
     await Timer(1, unit="ns")
 
     # Loop exits with x1=0
-    assert dut.reg_file.regs[1].value == 0,  f"x1={dut.reg_file.regs[1].value}"
+    assert dut.riscv_core.reg_file.regs[1].value == 0,  f"x1={dut.riscv_core.reg_file.regs[1].value}"
 
     # Branch-during-miss: skip branch taken, wrong path never ran
-    assert dut.reg_file.regs[3].value == 42, f"x3={dut.reg_file.regs[3].value}"
+    assert dut.riscv_core.reg_file.regs[3].value == 42, f"x3={dut.riscv_core.reg_file.regs[3].value}"
 
-    assert dut.reg_file.regs[10].value == 0, f"x10={dut.reg_file.regs[10].value}"
+    assert dut.riscv_core.reg_file.regs[10].value == 0, f"x10={dut.riscv_core.reg_file.regs[10].value}"
 
     # Conflict miss: 0x100 evicted 0x000 lines
-    assert dut.reg_file.regs[4].value == 1,  f"x4={dut.reg_file.regs[4].value}"
+    assert dut.riscv_core.reg_file.regs[4].value == 1,  f"x4={dut.riscv_core.reg_file.regs[4].value}"
     
-    assert dut.reg_file.regs[5].value == 2,  f"x5={dut.reg_file.regs[5].value}"
+    assert dut.riscv_core.reg_file.regs[5].value == 2,  f"x5={dut.riscv_core.reg_file.regs[5].value}"
 
 
 
